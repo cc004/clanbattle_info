@@ -46,7 +46,9 @@ def format_challenge_report(challenge_list: list):
 async def get_collect_report(group_id: str) -> (int, str):
     group_id = str(group_id)
     msg = ""
-    data = await query_data(group_id, "collect-report")
+    data = await query_data(group_id, '/webview/android', {
+        'target': 'gzlj-clan-collect-report/a'
+    })
     if 'code' not in data: #网络错误
         return '网络异常'
     if data['code'] != 0: #cookie错误
@@ -72,7 +74,12 @@ async def get_day_report(group_id: str, day: int = 0) -> (int, str):
     day_str = get_daystr_from_daylist(group_id, day)
     if not day_str:
         return '无数据'
-    data = await query_data(group_id, "day_report", day_str)
+    data = await query_data(group_id, '/webview/android', {
+        'target': 'gzlj-clan-day-report/a',
+        'date': day_str,
+        'page': 1,
+        'size': 30
+    })
     if 'code' not in data: #网络错误
         return '网络异常'
     if data['code'] != 0: #cookie错误

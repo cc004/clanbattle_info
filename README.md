@@ -1,3 +1,15 @@
+# 公会战数据查询及自动报刀插件
+
+本插件改自[clanbattle_info](https://github.com/zyujs/clanbattle_info)，实现了app端协议
+
+## 使用方法
+1. 按原有项目配置好项目，cookie留空
+2. **root**过的手机/模拟器打开bigfun登录b站并授权工会战信息获取
+3. 打开/data/data/cn.bigfun/shared_prefs/BF_DATE.xml，将BF-Client-Data和device_number里面的内容复制到配置文件的对应值
+4. 打开sqlite3数据库/data/data/cn.bigfun/databases/bf-db，找到表user中token字段，将值填入cookie中
+
+# 以下为原项目简介
+
 # 本项目已停止维护
 
 现在打开毕方网页版团队战工具的boss报表页面, 你会在页面下方看到一行字:

@@ -7,6 +7,7 @@ import threading
 import traceback
 import math
 import nonebot
+from .bfclient import *
 
 __all__ = [
     #数据
@@ -40,20 +41,6 @@ __all__ = [
     ]
 
 magic_name = '13c941a144c18a98eb54b493ff0bd279' #魔法昵称,用于将全部未知昵称指定给某个qq, 如有重名建议打死
-
-ext_param = ''
-#ext_param = '&battle_id=1'  #指定某一期会战 用于debug
-base_api = 'https://www.bigfun.cn/api/feweb?target='
-targets = {
-    #公会总表
-    "collect-report": "gzlj-clan-collect-report/a",
-    #工会日表: boss状态 公会等级 日期列表
-    "day_report_collect": "gzlj-clan-day-report-collect/a" + ext_param,
-    "day_report": "gzlj-clan-day-report/a&date={}&page=1&size=30" + ext_param,  #yyyy-mm-dd
-    #boss报表
-    "boss_report_collect": "gzlj-clan-boss-report-collect/a" + ext_param, #boss报表
-    "boss_report": "gzlj-clan-boss-report/a&boss_id={}&page={}" + ext_param, #boss_id page
-}
 
 #群设置
 group_config = { }
@@ -185,17 +172,15 @@ def load_group_config(group_id: str) -> int:
     if not group_id in group_config:
         group_config[group_id] = {}
     #cookie
+    #now cookie is replaced with access_tokens and clients
     if 'cookie' in config:
         text = config['cookie']
-        text = text.replace(' ','')
-        cookie = {}
-        for line in text.split(';'):
-            if '=' in line:
-                key, value = line.split('=',1)
-                cookie[key] = value
-        group_config[group_id]['cookie'] = cookie
+        group_config[group_id]['cookie'] = bfclient(Android362, {
+            'BF-Client-Data': config['BF-Client-Data'],
+            'device_number': config['device_number']
+        }, text)
     else:
-        group_config[group_id]['cookie'] = {}
+        group_config[group_id]['cookie'] = bfclient(Android362, default_device)
     #推送开关
     if 'push_challenge' in config:
         group_config[group_id]['push_challenge'] = config['push_challenge']
@@ -239,7 +224,9 @@ async def update_clanbattle_info_boss(group_id: str):
         if datetime.datetime.now() < clanbattle_info[group_id]['boss_update_datetime']:
             return 0
     #刷新boss列表 会战星座名
-    data = await query_data(group_id, "boss_report_collect")
+    data = await query_data(group_id, "/webview/android", {
+        'target': 'gzlj-clan-boss-report-collect/a'
+    })
     if not data or len(data) == 0:
         group_config[group_id]['info'] = 'boss_report_collect接口访问异常'
         return 1
@@ -262,7 +249,9 @@ async def update_clanbattle_info_boss(group_id: str):
 # boss_info需要持续更新
 async def update_clanbattle_info_day(group_id: str):
     #检查是否需要更新
-    data = await query_data(group_id, "day_report_collect")
+    data = await query_data(group_id, '/webview/android', {
+        'target': 'gzlj-clan-day-report-collect/a'
+    })
     if not data or len(data) == 0:
         group_config[group_id]['info'] = 'day_report_collect接口访问异常'
         return 1
@@ -333,15 +322,11 @@ def save_group_data(group_id: str):
     except:
         traceback.print_exc()
 
-async def query_data(group_id: str, target: str, *ext):
+async def query_data(group_id: str, endpoint: str, params: dict):
     group_id = str(group_id)
-    cookie = {}
-    if group_id in group_config:
-        cookie = group_config[group_id]['cookie']
     try:
-        async with aiohttp.ClientSession(cookies=cookie) as session:
-            async with session.get(base_api + targets[target].format(*ext)) as resp:
-                return await resp.json(content_type='application/json')
+        res = await group_config[group_id]['cookie'].callapi('GET', endpoint, params)
+        return res
     except:
         traceback.print_exc()
     return None
@@ -358,7 +343,12 @@ async def query_boss_data(group_id, boss = 0, page = 0):
         return 1, 'query_boss_data: 无法获取boss_id'
     page += 1 #api的page从1开始
 
-    data = await query_data(group_id, "boss_report", boss_id, page)
+    data = await query_data(group_id, "/webview/android", {
+        'target': 'gzlj-clan-boss-report/a',
+        'boss_id': boss_id,
+        'page': page
+    })
+    
     if not data or len(data) == 0:
         return 1, 'query_boss_data: api访问失败'
     if not 'data' in data:

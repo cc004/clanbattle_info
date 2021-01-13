@@ -250,7 +250,10 @@ async def get_unknown_members_report(group_id: str) -> str:
     if ret != 0:
         return name2qq
 
-    data = await query_data(group_id, "collect-report")
+    data = await query_data(group_id, '/webview/android', {
+        'target': 'gzlj-clan-collect-report/a'
+    })
+    
     if 'code' not in data: #网络错误
         return '网络异常'
     if data['code'] != 0: #cookie错误
