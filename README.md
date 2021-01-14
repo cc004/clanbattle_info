@@ -6,7 +6,7 @@
 1. 按原有项目配置好项目，cookie留空
 2. **root**过的手机/模拟器打开bigfun登录b站并授权工会战信息获取
 3. 打开/data/data/cn.bigfun/shared_prefs/BF_DATE.xml，将BF-Client-Data和device_number里面的内容复制到配置文件的对应值
-4. 打开sqlite3数据库/data/data/cn.bigfun/databases/bf-db，找到表user中token字段，将值填入cookie中
+4. 打开sqlite3数据库/data/data/cn.bigfun/databases/bf-db，找到表user中**access_key**字段，将值填入cookie中
 
 # 以下为原项目简介
 
@@ -59,7 +59,7 @@ R.I.P.
 
 - `cookie` 使用游戏账号登录 [公主连结团队战工具](https://www.bigfun.cn/tools/pcrteam/) 生成的文本格式cookie, 需使用浏览器开发者工具获取
 - `push_challenge` 出刀信息推送开关
-- `report_mode` 自动出刀模式,取值可以为 `yobot_standalone` : 独立yobot模式, `yobot_embedded` : 嵌入式yobot模式, `disable` : 关闭自动报刀
+- `report_mode` 自动出刀模式,取值可以为 `yobot_standalone` : 独立yobot模式, `yobot_embedded` : 嵌入式yobot模式, `yobot_plugin`：yobot作为hoshinobot的插件工作，`disable` : 关闭自动报刀
 - `yobot_api` 如果使用 `yobot_standalone` 模式,需填入公会yobotAPI网址
 
 ## 自动报刀模式说明
