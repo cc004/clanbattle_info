@@ -83,7 +83,7 @@ class bfclient:
     async def callapi(self, method, endpoint, params, dologin = False, retry = False):
     
         if not dologin and self.token is None:
-            result = self.refresh_token()
+            result = await self.refresh_token()
             if result is not None:
                 return result
         self.paramsign(params, dologin)
@@ -109,10 +109,10 @@ class bfclient:
         if 'error' in result:
             code = result['error']['code']
             if code == 1103:
-                result = self.refresh_token()
+                result = await self.refresh_token()
                 if result is not None:
                     return result
                 elif not retry:
-                    return self.callapi(method, endpoint, params, dologin, True)
+                    return await self.callapi(method, endpoint, params, dologin, True)
                 else:
                     return result
