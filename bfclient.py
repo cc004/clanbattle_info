@@ -1,5 +1,5 @@
-from requests import request
-#from hoshino.aiorequests import request
+#from requests import request
+from hoshino.aiorequests import request
 from time import time
 from random import randint
 from hashlib import md5
