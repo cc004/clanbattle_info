@@ -68,7 +68,7 @@ class bfclient:
             'method': 'login',
             'access_key': self.key,
             'base': '1',
-            'buvid': '',
+            'buvid': self.device_number,
             'device': self.device,
 
         }, dologin = True)
@@ -106,13 +106,9 @@ class bfclient:
         print(f'calling with url={url}')
         result = loads(await (await request(method, url, headers=self.header, data = dumps(params))).content)
 
-        if 'error' in result:
+        if 'error' in result and not dologin and not retry:
             code = result['error']['code']
-            if code == 1103:
-                result = await self.refresh_token()
-                if result is not None:
-                    return result
-                elif not retry:
-                    return await self.callapi(method, endpoint, params, dologin, True)
-                else:
-                    return result
+            if code == 403:
+                self.token = None
+                return await self.callapi(method, endpoint, params, dologin, True)
+        return result
