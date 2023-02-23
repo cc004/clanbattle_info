@@ -13,7 +13,7 @@ common = {
 
 Android362 = {
     'BF-Client-Type': 'BF-ANDROID',
-    'BF-Client-Version': '3.6.2',
+    'BF-Client-Version': '3.9.12',
     'User-Agent': 'okhttp/3.12.12',
     'BF-Json-Api-Version': 'v1.0'
 }
