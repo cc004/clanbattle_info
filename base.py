@@ -18,10 +18,10 @@ __all__ = [
     'clanbattle_info',
     'magic_name',
 
-    'preinit_group',
-    'init_group',
+    'preinit_group', 
+    'init_group', 
     'get_group_list',
-    'update_clanbattle_data',
+    'update_clanbattle_data', 
     'get_new_challenges',
     'save_group_data',
     'query_data',
@@ -79,6 +79,7 @@ async def update_challenge_list(group_id: str) -> int:
 
     changed = False
     boss_count = 0
+    group_boss_data = [[] for i in range(5)]
     while True:
         last_challenge = {} #放上次更新的最后一条出刀数据 如果出刀表为空 就空着
         if len(boss_challenge_list[group_id][boss]) != 0:
@@ -87,24 +88,28 @@ async def update_challenge_list(group_id: str) -> int:
         page = 0
         index = -1
         start = 0
-        while True:
+        # while True:
             #寻找该boss本地最后一条出刀数据在新获取数据中的位置(index)
             #当前循环没有找到就继续循环拉取下一页,直到找到或者读取完全部记录.
             #没有新出刀记录index = 0, 本地记录为空index=-1
             #这个动作不能在整5分进行,否则bigfun数据刷新会导致出刀数据不连续.
-            ret, temp_challenges = await query_boss_data(group_id, boss, page)
-            if ret != 0:
-                group_config[group_id]['info'] = temp_challenges
-                return 1
-            challenges += temp_challenges
-            for i in range(start, len(challenges)):
-                if challenges[i] == last_challenge:
+        ret, temp_challenges = await query_boss_data(group_id, boss, page)
+        if ret != 0:
+            group_config[group_id]['info'] = temp_challenges
+            return 1
+        for i in temp_challenges:
+            group_boss_data[boss].append(i)
+        challenges += temp_challenges
+        for i in range(start, len(challenges)):
+            if 'datetime' in last_challenge:
+                if challenges[i]['datetime'] == last_challenge['datetime']:
                     index = i
                     break
-            page += 1
-            start += len(challenges)
-            if index != -1 or len(temp_challenges) == 0 or len(temp_challenges) % 25 != 0:
-                break
+        page += 1
+        start += len(challenges)
+        # if index != -1 or len(temp_challenges) == 0 or len(temp_challenges) % 25 != 0:
+        # if index != -1 or len(temp_challenges) == 0:
+        #     break
         if index == -1: #没有找到匹配项 重置该boss出刀表
             index = len(challenges)
             boss_challenge_list[group_id][boss] = []
@@ -121,7 +126,7 @@ async def update_challenge_list(group_id: str) -> int:
         #这里处理恰好5个boss最后一刀都是尾刀的情况,防止死循环
         if boss_count > 5:
             break
-
+    
     #如果boss表有更新 重新生成总表
     if changed:
         all_challenge_list[group_id] = []
@@ -136,7 +141,7 @@ async def update_challenge_list(group_id: str) -> int:
                 boss += 1
                 boss %= 5
     return 0
-
+                    
 #线程安全的更新出刀数据
 update_lock = {}
 async def safe_update_challenge_list(group_id: str):
@@ -331,14 +336,9 @@ async def query_data(group_id: str, endpoint: str, params: dict):
         traceback.print_exc()
     return None
 
-def get_lap_num (data):
-    return int(data['lap_num'])
-
 #获取boss出刀数据
 async def query_boss_data(group_id, boss = 0, page = 0):
     challenges = []
-    if (page == 1):
-        return 0, challenges
     boss_id = 0
     #在会战开始前可以能无法获取boss_list 这种情况直接返回空列表
     try:
@@ -346,27 +346,31 @@ async def query_boss_data(group_id, boss = 0, page = 0):
     except:
         traceback.print_exc()
         return 1, 'query_boss_data: 无法获取boss_id'
+    # page += 1 #api的page从1开始
 
-    bossData = []
-    for num in [0, 100, 200 ,300]:
-        dataPage = 1
-        needMore = True
-        while needMore:
+    bossdata: list[dict] = []
+    for i in [0, 100, 200, 300, 400]:
+        page = 0
+        while True:
+            page += 1
             data = await query_data(group_id, "/webview/android", {
                 'target': 'gzlj-clan-boss-report/a',
-                'boss_id': int(boss_id) + num,
-                'page': dataPage
+                'boss_id': int(boss_id) + i,
+                'page': page
             })
             if not data or len(data) == 0:
                 return 1, 'query_boss_data: api访问失败'
             if not 'data' in data:
                 return 1, 'query_boss_data: api数据异常'
-            bossData = bossData + data['data']
-            dataPage += 1
-            if len(data['data']) == 0:
-                needMore = False
-    bossData.sort(key=get_lap_num,reverse=True)
-    for item in bossData:
+            if data['data']:
+                for n in data['data']:
+                    bossdata.append(n)
+            else:
+                break
+
+    bossdata.sort(key=lambda x: x['datetime'], reverse=True)
+    
+    for item in bossdata:
         item['boss'] = boss #源数据没有boss序号 额外加入
         challenges.append(item)
     return 0, challenges
@@ -491,7 +495,7 @@ async def update_clanbattle_data(group_id: str) -> int:
         group_data[group_id]['index'] = 0
         group_data[group_id]['yobot_index'] = 0
         save_group_data(group_id)
-
+    
     #更新出刀表
     if await safe_update_challenge_list(group_id) != 0:
         clanbattle_info[group_id]['failed_cnt'] += 1
@@ -502,7 +506,7 @@ async def update_clanbattle_data(group_id: str) -> int:
             return 1
     else:
         clanbattle_info[group_id]['failed_cnt'] = 0
-
+    
     #检查现在是否在会战中
     if not get_daystr_from_daylist(group_id):
         group_config[group_id]['info'] = '公会战已结束' #能获取到日期列表但当天不在列表内 一定是公会战已结束 公会战开始前日期列表是空的
@@ -512,7 +516,7 @@ async def update_clanbattle_data(group_id: str) -> int:
     save_group_data(group_id)
     return 0
 
-
+        
 #获取未推送的新出刀记录
 def get_new_challenges(group_id: str) -> list:
     #上次同步位置
@@ -539,7 +543,7 @@ def check_reservation(group_id: str):
         #boss状态 {name: "狂乱魔熊", total_life: 12000000, current_life: 2885013, lap_num: 1}
         clanbattle_info[group_id]['boss_info']
         #boss列表 [{id: "501", boss_name: "双足飞龙"}, {id: "502", boss_name: "野性狮鹫"}, {id: "503", boss_name: "雷电"},…]
-        clanbattle_info[group_id]['boss_list']
+        clanbattle_info[group_id]['boss_list'] 
         boss = -1
         for i in range(len(clanbattle_info[group_id]['boss_list'])):
             if clanbattle_info[group_id]['boss_list'][i]['boss_name'] == clanbattle_info[group_id]['boss_info']['name']:
@@ -601,7 +605,7 @@ def add_bind(group_id: str, name: str, qq: int):
     group_data[group_id]['report_pause'] = False #解除暂停
     save_group_data(group_id)
     return 0
-
+            
 def get_bind_msg(group_id: str):
     msg = '绑定列表:\n'
     if 'members' not in group_data[group_id]:   #游戏名-qq对应表
@@ -656,7 +660,7 @@ def get_state_msg(group_id: str):
         msg += '挂起'
     else:
         msg += '未知状态'
-
+    
     if 'failed_cnt' in clanbattle_info[group_id] and clanbattle_info[group_id]['failed_cnt'] > 0:
         msg += f"\n异常计数:{clanbattle_info[group_id]['failed_cnt']}"
         msg += f"\n异常信息:{group_config[group_id]['info']}"
@@ -736,7 +740,7 @@ def generate_data_for_clanbattle_report(group_id: str, nickname: str):
         result['clanname'] = clanbattle_info[group_id]['clan_info']['name']
     except:
         pass
-
+    
     if group_id not in all_challenge_list:
         return
 
